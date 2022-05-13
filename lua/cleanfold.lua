@@ -3,20 +3,25 @@ local fn = vim.fn
 
 local M = {}
 
-local ffi = require("ffi")
-ffi.cdef'int curwin_col_off(void);'
+local ft_handlers = {
+  scala = function(line)
+    -- Remove any text after the return type of a def
+    return fn.substitute(line, [[\({\|=\).\{-}$]] , '', 'g')
+  end
+}
 
-local get_gutter_width = function()
-  return ffi.C.curwin_col_off();
+local function get_gutter_width(win)
+  return vim.fn.getwininfo(win)[1].textoff
 end
 
 local function mangle_line(line)
-
   local commentstring = vim.split(vim.bo.commentstring, "%%s")[1]
 
-  for _, marker in ipairs(vim.split(vim.wo.foldmarker, ",")) do
-    -- Remove marker if it is apart of a comment
-    line = fn.substitute(line, commentstring..'\\(.*\\)\\zs'..marker, '\1', 'g')
+  if vim.wo.foldmethod == 'marker' then
+    for _, marker in ipairs(vim.split(vim.wo.foldmarker, ",")) do
+      -- Remove marker if it is apart of a comment
+      line = fn.substitute(line, commentstring..'\\(.*\\)\\zs'..marker, '\1', 'g')
+    end
   end
 
   if commentstring ~= '' then
@@ -27,9 +32,11 @@ local function mangle_line(line)
   -- Remove leading whitespace
   line = line:gsub('^%s+', '')
 
-  if vim.bo.filetype == 'scala' then
+  local ft = vim.bo.filetype
+
+  if ft_handlers[ft] then
     -- Remove any text after the return type of a def
-    line = fn.substitute(line, [[\({\|=\).\{-}$]] , '', 'g')
+    line = ft_handlers[ft](line)
   end
 
   return line
@@ -47,9 +54,11 @@ function M.foldtext()
   local fold_size = fe - fs + 1
   local indent = vim.bo.shiftwidth * (vim.v.foldlevel - 1)
 
+  local win = api.nvim_get_current_win()
+
   local padding =
-    api.nvim_win_get_width(0) -
-    get_gutter_width() -
+    api.nvim_win_get_width(win) -
+    get_gutter_width(win) -
     #line -
     #tostring(fold_size) -
     indent -
@@ -64,9 +73,7 @@ function M.foldtext()
 end
 
 function M.setup()
-  vim.cmd[[
-    set foldtext=luaeval(\"require('cleanfold').foldtext()\")
-  ]]
+  vim.wo.foldtext = 'v:lua.package.loaded.cleanfold.foldtext()'
 end
 
 return M
