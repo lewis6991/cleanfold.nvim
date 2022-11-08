@@ -72,8 +72,8 @@ function M.foldtext()
     ' '
 end
 
+-- TODO(lewis6991): remove
 function M.setup()
-  vim.wo.foldtext = 'v:lua.package.loaded.cleanfold.foldtext()'
 end
 
 return M
