@@ -46,6 +46,8 @@ local function getline(lno)
   return api.nvim_buf_get_lines(0, lno-1, lno, false)[1]
 end
 
+local RIGHT_PAD = 2
+
 function M.foldtext()
   local fs = vim.v.foldstart
   local fe = vim.v.foldend
@@ -62,14 +64,14 @@ function M.foldtext()
     #line -
     #tostring(fold_size) -
     indent -
-    1
+    RIGHT_PAD
 
   return
     string.rep(' ', indent)..
     line..
     string.rep(' ', padding)..
     fold_size..
-    ' '
+    string.rep(' ', RIGHT_PAD)
 end
 
 -- TODO(lewis6991): remove
